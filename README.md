@@ -95,25 +95,25 @@ AI-Cooking-Assistant
 
 ###  Chat Interface
 
-<img src="assets/food.png" width="850"/>
+<img src="frontend/assets/food.png" width="850"/>
 
 ---
 
 ### 🍲 AI Generated Recipe
 
-<img src="assets/food(01).png" width="850"/>
+<img src="frontend/assets/food(01).png" width="850"/>
 
 ---
 
 ###  Structured Recipe Card UI
 
-<img src="assets/food(2).png" width="850"/>
+<img src="frontend/assets/food(2).png" width="850"/>
 
 ---
 
 ###  Multiple Recipe Conversation
 
-<img src="assets/food(3).png" width="850"/>
+<img src="frontend/assets/food(3).png" width="850"/>
 
 ---
 
