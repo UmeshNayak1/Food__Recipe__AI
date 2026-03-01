@@ -30,7 +30,7 @@ function parseRecipe(text) {
 
   const steps = extract("steps:", ["tips:"])
     .split("\n")
-    .map((s) => s.replace(/^\d+[).\s]*/, "").trim())
+    .map((s) => s.replace(/^\d+[\).\s]*/, "").trim())
     .filter(Boolean);
 
   const tips = extract("tips:", [])
@@ -71,9 +71,10 @@ function App() {
     setMessages(updated);
     setInput("");
     setLoading(true);
-
+// for local hot use fetch("http://localhost:5000/api/assistant")
+// and for deployment use url link come after host
     try {
-      const res = await fetch("http://localhost:5000/api/assistant", {
+      const res = await fetch("https://food-recipe-ai-cho9.onrender.com", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: input })
