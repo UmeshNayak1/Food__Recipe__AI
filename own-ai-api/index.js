@@ -13,70 +13,68 @@ app.post("/api/assistant", async (req, res) => {
 
     if (!message || message.trim() === "") {
       return res.status(400).json({
-        error: "Message is required"
+        error: "Message is required",
       });
     }
 
-    const lowerMsg = message.toLowerCase();
-
-    /* ---------------- SMART INTENT DETECTION ---------------- */
-
-    const isDirectRecipeRequest =
-      lowerMsg.includes("recipe") ||
-      lowerMsg.includes("how to make") ||
-      lowerMsg.includes("how do i make") ||
-      lowerMsg.includes("cook") ||
-      lowerMsg.includes("prepare");
-
-    const looksLikeIngredients =
-      message.includes(",") &&
-      message.split(",").length >= 2;
-
-    const isRecipeRequest =
-      isDirectRecipeRequest && !looksLikeIngredients;
+    const lowerMessage = message.toLowerCase();
 
     let systemPrompt = "";
 
-    if (isRecipeRequest) {
-      /* -------- FULL RECIPE MODE -------- */
+    /* ---------------- PROMPT LOGIC ---------------- */
+
+    // 🍲 If user asks for full recipe
+    if (
+      lowerMessage.includes("recipe") ||
+      lowerMessage.includes("how to make")
+    ) {
       systemPrompt = `
-You are a professional chef AI.
+You are a professional cooking assistant.
 
-Return ONLY valid JSON.
-
-Format strictly like this:
+Return ONLY valid JSON in this format:
 
 {
   "name": "Dish Name",
-  "ingredients": ["item 1", "item 2"],
-  "steps": ["step 1", "step 2"],
-  "tips": ["tip 1", "tip 2"]
+  "ingredients": ["ingredient 1", "ingredient 2"],
+  "steps": ["step 1", "step 2", "step 3"],
+  "tips": ["tip 1"]
 }
 
-Do not write explanations.
-Do not write text outside JSON.
+Rules:
+- Do NOT write explanations.
+- Do NOT write text outside JSON.
+- Keep steps clear and beginner-friendly.
+- Minimum 4 cooking steps.
 `;
-    } else {
-      /* -------- INGREDIENT SUGGESTION MODE -------- */
+    } 
+    // 🥗 If user gives ingredients → suggest dishes
+    else {
       systemPrompt = `
-You are a professional chef AI.
+You are a professional cooking assistant.
 
 User will provide ingredients.
+
+Task:
+- Suggest 5 DIFFERENT dishes.
+- Be creative.
+- Avoid repeating similar dish names.
+- If ingredients are limited, still try to suggest possible dishes.
 
 Return ONLY valid JSON in this format:
 
 {
   "dishes": [
-    "Dish 1",
-    "Dish 2",
-    "Dish 3",
-    "Dish 4",
-    "Dish 5"
+    "Dish Name 1",
+    "Dish Name 2",
+    "Dish Name 3",
+    "Dish Name 4",
+    "Dish Name 5"
   ]
 }
 
-Do not write explanations.
-Do not write text outside JSON.
+Rules:
+- Do NOT explain anything.
+- Do NOT write text outside JSON.
 `;
     }
 
@@ -87,20 +85,20 @@ Do not write text outside JSON.
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           model: "llama3",
           stream: false,
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: message }
+            { role: "user", content: message },
           ],
           options: {
-            temperature: 0,
-            top_p: 0.1
-          }
-        })
+            temperature: 0.7,   // Increased creativity
+            top_p: 0.9
+          },
+        }),
       }
     );
 
@@ -108,44 +106,57 @@ Do not write text outside JSON.
       const text = await ollamaResponse.text();
       console.error("Ollama Error:", text);
       return res.status(500).json({
-        error: "Ollama API failed"
+        error: "Ollama API failed",
       });
     }
 
     const data = await ollamaResponse.json();
     let raw = data?.message?.content ?? "";
 
+    /* ---------------- CLEAN JSON ---------------- */
+
     raw = raw.trim();
 
-    /* -------- REMOVE MARKDOWN JSON BLOCKS IF PRESENT -------- */
-    if (raw.startsWith("```")) {
-      raw = raw.replace(/```json/g, "")
-               .replace(/```/g, "")
-               .trim();
-    }
+    // Remove markdown blocks if model adds them
+    raw = raw.replace(/```json|```/g, "").trim();
 
-    /* -------- VALIDATE JSON -------- */
-    try {
-      const parsed = JSON.parse(raw);
+    // Extract JSON safely using regex
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
 
+    if (!jsonMatch) {
+      console.error("No valid JSON found:", raw);
       return res.json({
-        reply: JSON.stringify(parsed)
-      });
-    } catch (err) {
-      console.error("Invalid JSON from LLM:", raw);
-      return res.status(500).json({
-        error: "AI returned invalid JSON"
+        reply: JSON.stringify({
+          dishes: ["Unable to generate suggestions. Try again."],
+        }),
       });
     }
+
+    let parsed;
+
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (err) {
+      console.error("Invalid JSON from model:", raw);
+      return res.json({
+        reply: JSON.stringify({
+          dishes: ["AI response formatting error. Please retry."],
+        }),
+      });
+    }
+
+    /* ---------------- RETURN CLEAN JSON ---------------- */
+
+    res.json({ reply: JSON.stringify(parsed) });
 
   } catch (error) {
     console.error("Server Error:", error);
     res.status(500).json({
-      error: "Internal server error"
+      error: "Internal server error",
     });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ AI API running at http://localhost:${PORT}`);
+  console.log(`✅ OWN AI API running at http://localhost:${PORT}`);
 });

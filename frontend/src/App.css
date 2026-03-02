@@ -1,125 +1,142 @@
-* {
-  box-sizing: border-box;
-  font-family: "Segoe UI", system-ui, sans-serif;
-}
-
 body {
   margin: 0;
-  background: #f6f7f9;
+  font-family: "Inter", sans-serif;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: #fff;
 }
 
-/* Page wrapper */
 .app {
-  max-width: 1100px;
-  height: calc(100vh - 40px);
-  margin: 20px auto;
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  height: 100vh;
 }
 
-/* Header */
-.header {
-  background: linear-gradient(90deg, #2ecc71, #27ae60);
-  color: white;
-  padding: 18px 24px;
-  font-size: 20px;
+header {
+  text-align: center;
+  padding: 20px;
+  font-size: 22px;
   font-weight: 600;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
 }
 
-/* Chat area */
 .chat {
   flex: 1;
-  padding: 24px;
+  padding: 20px;
   overflow-y: auto;
-  background: #ffffff;
 }
 
-/* Message bubbles */
 .message {
-  max-width: 720px;
-  padding: 14px 18px;
-  margin-bottom: 16px;
-  border-radius: 12px;
-  font-size: 15px;
-  line-height: 1.5;
+  margin-bottom: 15px;
+  max-width: 80%;
 }
 
 .message.assistant {
-  background: #f3efe8;
-  color: #111;
+  align-self: flex-start;
 }
 
 .message.user {
-  background: #e8f5e9;
-  margin-left: auto;
-  color: #111;
+  align-self: flex-end;
+  text-align: right;
 }
 
-/* Input section */
-.input-area {
-  border-top: 1px solid #e5e5e5;
-  padding: 16px 24px 12px;
-  position: relative;
-  background: #ffffff;
+.message p {
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
-/* Textarea */
-textarea {
-  width: 100%;
-  min-height: 64px;
-  resize: none;
-  padding: 16px 52px 16px 16px;
-  font-size: 15px;
-  border-radius: 12px;
-  border: 2px solid #ff6a00;
-  outline: none;
+.message.user p {
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  color: #fff;
 }
 
-textarea::placeholder {
-  color: #777;
+/* Card */
+.card {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 20px;
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
 }
 
-/* Send button */
-button {
-  position: absolute;
-  right: 36px;
-  bottom: 46px;
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
+.recipe h2 {
+  margin-top: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+ul, ol {
+  padding-left: 20px;
+}
+
+/* Buttons */
+.primary-btn {
+  margin-top: 15px;
+  padding: 10px 16px;
   border: none;
-  background: #ffb199;
-  font-size: 18px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
   cursor: pointer;
 }
 
-button:hover {
-  background: #ff8a65;
+.chip {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: none;
+  margin: 5px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
 }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
 }
 
-/* Hint text */
-.hint {
-  margin-top: 10px;
-  text-align: center;
-  font-size: 12px;
-  color: #777;
+/* Cooking Mode */
+.cooking-mode {
+  margin-top: 15px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
 }
 
-/* Scrollbar (optional polish) */
-.chat::-webkit-scrollbar {
-  width: 6px;
-}
-
-.chat::-webkit-scrollbar-thumb {
-  background: #ddd;
+.controls button {
+  margin: 5px;
+  padding: 6px 10px;
   border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+/* Footer */
+footer {
+  display: flex;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+textarea {
+  flex: 1;
+  resize: none;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+}
+
+footer button {
+  margin-left: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
 }
