@@ -95,7 +95,7 @@ AI-Cooking-Assistant
 
 ###  Chat Interface
 
-<img src="frontend/assets/food.png" width="850"/>
+<img src="frontend/assets/food(03).png" width="850"/>
 
 ---
 
@@ -113,7 +113,7 @@ AI-Cooking-Assistant
 
 ###  Multiple Recipe Conversation
 
-<img src="frontend/assets/food(3).png" width="850"/>
+<img src="frontend/assets/food.png" width="850"/>
 
 ---
 
