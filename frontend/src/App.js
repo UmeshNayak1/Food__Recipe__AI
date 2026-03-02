@@ -2,44 +2,34 @@ import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
 /* ---------------- RECIPE PARSER ---------------- */
-function parseRecipe(text) {
-  if (!text || !text.toLowerCase().includes("dish")) return null;
+function parseRecipe(content) {
+  if (!content) return null;
 
-  const extract = (start, endList) => {
-    const lower = text.toLowerCase();
-    const startIndex = lower.indexOf(start);
+  // ✅ Try parsing JSON first
+  try {
+    const json = JSON.parse(content);
 
-    if (startIndex === -1) return "";
+    // Full recipe structure
+    if (json.name && json.ingredients && json.steps) {
+      return {
+        dish: json.name,
+        ingredients: json.ingredients,
+        steps: json.steps,
+        tips: json.tips || []
+      };
+    }
 
-    let endIndex = text.length;
+    // Dish suggestions structure
+    if (json.dishes && Array.isArray(json.dishes)) {
+      return { suggestions: json.dishes };
+    }
+  } catch (e) {
+    // Not JSON → fallback
+  }
 
-    endList.forEach((e) => {
-      const i = lower.indexOf(e);
-      if (i > startIndex && i < endIndex) endIndex = i;
-    });
-
-    return text.substring(startIndex + start.length, endIndex).trim();
-  };
-
-  const dish = extract("dish:", ["ingredients:", "steps:", "tips:"]);
-
-  const ingredients = extract("ingredients:", ["steps:", "tips:"])
-    .split("\n")
-    .map((i) => i.replace(/[-•]/g, "").trim())
-    .filter(Boolean);
-
-  const steps = extract("steps:", ["tips:"])
-    .split("\n")
-    .map((s) => s.replace(/^\d+[).\s]*/, "").trim())
-    .filter(Boolean);
-
-  const tips = extract("tips:", [])
-    .split("\n")
-    .map((t) => t.replace(/[-•]/g, "").trim())
-    .filter(Boolean);
-
-  return { dish, ingredients, steps, tips };
+  return null;
 }
+
 /* ---------------- COMPONENT ---------------- */
 
 function App() {
@@ -47,14 +37,18 @@ function App() {
     {
       role: "assistant",
       content:
-        "Hi! I'm your AI cooking assistant. Tell me what ingredients you have, and I'll suggest delicious recipes you can make!"
+        "Hi! I'm your AI cooking assistant. Tell me what ingredients you have, and I'll suggest delicious dishes you can make!"
     }
   ]);
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(null);
 
   const chatRef = useRef(null);
+
+  const API_URL =
+    process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   /* AUTO SCROLL */
   useEffect(() => {
@@ -64,20 +58,26 @@ function App() {
     });
   }, [messages, loading]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+  const sendMessage = async (customMessage = null) => {
+    const messageToSend = customMessage || input;
 
-    const updated = [...messages, { role: "user", content: input }];
+    if (!messageToSend.trim() || loading) return;
+
+    const updated = [
+      ...messages,
+      { role: "user", content: messageToSend }
+    ];
+
     setMessages(updated);
     setInput("");
     setLoading(true);
-// for local hot use fetch("http://localhost:5000/api/assistant")
-// and for deployment use url link come after host == https://food-recipe-ai-cho9.onrender.com
+    setCurrentStep(null);
+
     try {
-      const res = await fetch("http://localhost:5000/api/assistant", {
+      const res = await fetch(`${API_URL}/api/assistant`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input })
+        body: JSON.stringify({ message: messageToSend })
       });
 
       const data = await res.json();
@@ -116,36 +116,102 @@ function App() {
           return (
             <div key={i} className={`message ${m.role}`}>
               {recipe ? (
-                <div className="recipe-card">
-                  <h2>🍲 {recipe.dish}</h2>
-
-                  <div className="section">
-                    <h3>Ingredients</h3>
+                recipe.suggestions ? (
+                  /* ----------- Dish Suggestions ----------- */
+                  <div className="recipe-card">
+                    <h3>🍽 Suggested Dishes</h3>
                     <ul>
-                      {recipe.ingredients.map((item, idx) => (
-                        <li key={idx}>{item}</li>
+                      {recipe.suggestions.map((dish, idx) => (
+                        <li key={idx}>
+                          <button
+                            className="suggestion-btn"
+                            onClick={() =>
+                              sendMessage(
+                                `Give me full recipe for ${dish} in JSON format`
+                              )
+                            }
+                          >
+                            {dish}
+                          </button>
+                        </li>
                       ))}
                     </ul>
                   </div>
+                ) : (
+                  /* ----------- Full Recipe ----------- */
+                  <div className="recipe-card">
+                    <h2>🍲 {recipe.dish}</h2>
 
-                  <div className="section">
-                    <h3>Steps</h3>
-                    <ol>
-                      {recipe.steps.map((step, idx) => (
-                        <li key={idx}>{step}</li>
-                      ))}
-                    </ol>
-                  </div>
+                    <div className="section">
+                      <h3>Ingredients</h3>
+                      <ul>
+                        {recipe.ingredients.map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
 
-                  <div className="section">
-                    <h3>Tips</h3>
-                    <ul>
-                      {recipe.tips.map((tip, idx) => (
-                        <li key={idx}>✅ {tip}</li>
-                      ))}
-                    </ul>
+                    <div className="section">
+                      <h3>Steps</h3>
+                      <ol>
+                        {recipe.steps.map((step, idx) => (
+                          <li key={idx}>{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    {recipe.tips.length > 0 && (
+                      <div className="section">
+                        <h3>Tips</h3>
+                        <ul>
+                          {recipe.tips.map((tip, idx) => (
+                            <li key={idx}>✅ {tip}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* -------- Cooking Mode -------- */}
+                    <button
+                      className="start-cooking-btn"
+                      onClick={() => setCurrentStep(0)}
+                    >
+                      🍳 Start Cooking Mode
+                    </button>
+
+                    {currentStep !== null &&
+                      recipe.steps[currentStep] && (
+                        <div className="cooking-mode">
+                          <h4>Step {currentStep + 1}</h4>
+                          <p>{recipe.steps[currentStep]}</p>
+
+                          <div className="cooking-controls">
+                            <button
+                              onClick={() =>
+                                setCurrentStep((prev) =>
+                                  prev > 0 ? prev - 1 : prev
+                                )
+                              }
+                            >
+                              ⬅ Previous
+                            </button>
+
+                            <button
+                              onClick={() =>
+                                setCurrentStep((prev) =>
+                                  prev < recipe.steps.length - 1
+                                    ? prev + 1
+                                    : prev
+                                )
+                              }
+                            >
+                              Next ➡
+                            </button>
+                          </div>
+                        </div>
+                      )}
                   </div>
-                </div>
+                )
               ) : (
                 m.content
               )}
@@ -167,7 +233,7 @@ function App() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
         />
-        <button onClick={sendMessage} disabled={loading}>
+        <button onClick={() => sendMessage()} disabled={loading}>
           ➤
         </button>
 

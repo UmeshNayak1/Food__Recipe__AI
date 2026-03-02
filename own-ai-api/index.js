@@ -1,9 +1,6 @@
 import express from "express";
 import cors from "cors";
 
-// ⚠️ Node 18+ already supports fetch
-// REMOVE node-fetch installation if using Node >=18
-
 const app = express();
 const PORT = 5000;
 
@@ -20,38 +17,71 @@ app.post("/api/assistant", async (req, res) => {
       });
     }
 
-//     const systemPrompt = `
-// You are a cooking assistant.
-// Return ONLY the recipe content.
-// Use clear line breaks.
-// Do not write explanations.
-// `;
+    const lowerMsg = message.toLowerCase();
 
-const systemPrompt = `
-You are a cooking assistant.
+    /* ---------------- SMART INTENT DETECTION ---------------- */
 
-Return recipe ONLY using this structure:
+    const isDirectRecipeRequest =
+      lowerMsg.includes("recipe") ||
+      lowerMsg.includes("how to make") ||
+      lowerMsg.includes("how do i make") ||
+      lowerMsg.includes("cook") ||
+      lowerMsg.includes("prepare");
 
-Dish:
-<name>
+    const looksLikeIngredients =
+      message.includes(",") &&
+      message.split(",").length >= 2;
 
-Ingredients:
-- item
-- item
+    const isRecipeRequest =
+      isDirectRecipeRequest && !looksLikeIngredients;
 
-Steps:
-1. step
-2. step
+    let systemPrompt = "";
 
-Tips:
-- tip
-- tip
+    if (isRecipeRequest) {
+      /* -------- FULL RECIPE MODE -------- */
+      systemPrompt = `
+You are a professional chef AI.
 
-Do not write paragraphs.
-Do not explain anything.
+Return ONLY valid JSON.
+
+Format strictly like this:
+
+{
+  "name": "Dish Name",
+  "ingredients": ["item 1", "item 2"],
+  "steps": ["step 1", "step 2"],
+  "tips": ["tip 1", "tip 2"]
+}
+
+Do not write explanations.
+Do not write text outside JSON.
 `;
+    } else {
+      /* -------- INGREDIENT SUGGESTION MODE -------- */
+      systemPrompt = `
+You are a professional chef AI.
 
-    // ✅ Call Ollama
+User will provide ingredients.
+
+Return ONLY valid JSON in this format:
+
+{
+  "dishes": [
+    "Dish 1",
+    "Dish 2",
+    "Dish 3",
+    "Dish 4",
+    "Dish 5"
+  ]
+}
+
+Do not write explanations.
+Do not write text outside JSON.
+`;
+    }
+
+    /* ---------------- CALL OLLAMA ---------------- */
+
     const ollamaResponse = await fetch(
       "http://localhost:11434/api/chat",
       {
@@ -74,7 +104,6 @@ Do not explain anything.
       }
     );
 
-    // ✅ Handle Ollama errors
     if (!ollamaResponse.ok) {
       const text = await ollamaResponse.text();
       console.error("Ollama Error:", text);
@@ -84,17 +113,30 @@ Do not explain anything.
     }
 
     const data = await ollamaResponse.json();
-
-    // ✅ Safe extraction
     let raw = data?.message?.content ?? "";
 
-    // ✅ Normalize formatting
-    const reply = raw
-      .replace(/\r\n/g, "\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
+    raw = raw.trim();
 
-    res.json({ reply });
+    /* -------- REMOVE MARKDOWN JSON BLOCKS IF PRESENT -------- */
+    if (raw.startsWith("```")) {
+      raw = raw.replace(/```json/g, "")
+               .replace(/```/g, "")
+               .trim();
+    }
+
+    /* -------- VALIDATE JSON -------- */
+    try {
+      const parsed = JSON.parse(raw);
+
+      return res.json({
+        reply: JSON.stringify(parsed)
+      });
+    } catch (err) {
+      console.error("Invalid JSON from LLM:", raw);
+      return res.status(500).json({
+        error: "AI returned invalid JSON"
+      });
+    }
 
   } catch (error) {
     console.error("Server Error:", error);
@@ -105,5 +147,5 @@ Do not explain anything.
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ OWN AI API running at http://localhost:${PORT}`);
+  console.log(`✅ AI API running at http://localhost:${PORT}`);
 });
